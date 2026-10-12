@@ -1,6 +1,6 @@
 # SvHomeBudget
 
-SvHomeBudget is a modern, native iOS personal expense and budget management application built with **SwiftUI** and Apple's **SwiftData** framework. It provides local-first persistence, reactive UI updates, visual budget tracking with threshold alerts, monthly budget pooling, and full data export/import capabilities.
+SvHomeBudget is a modern, native iOS personal expense and budget management application built with **SwiftUI** and Apple's **SwiftData** framework. It provides local-first persistence, reactive UI updates, visual budget tracking with threshold alerts, monthly budget pooling, historic/future cycle month navigation, and full data export/import capabilities.
 
 ---
 
@@ -41,6 +41,7 @@ SvHomeBudget empowers users to maintain financial discipline through:
 - Allocating budget categories with individual spending caps.
 - Logging daily expenditures linked to specific categories.
 - Monitoring month-to-date spending against custom limits in real time.
+- Navigating freely between current, past, and future monthly cycles.
 - Configuring a dedicated monthly deposit pool for holistic cycle tracking.
 - Keeping 100% of user data on-device with zero remote server dependency.
 - Backing up, exporting, and restoring complete financial data via standard JSON files.
@@ -51,6 +52,7 @@ SvHomeBudget empowers users to maintain financial discipline through:
 
 - **Local-First Persistence**: Full offline capability using SwiftData with zero external SDKs.
 - **Reactive UI**: Immediate dashboard synchronisation upon data mutations via SwiftUI `@Query` macros.
+- **Multi-Month Cycle Stepper**: Header stepper (`◀` and `▶`) allowing users to seamlessly review historical months or plan future budget cycles with instant recalculation of spending ratios and pool balances.
 - **Dynamic Visual Progress Bars**: Color-coded indicators representing spending progress:
   - 🔵 **Blue**: Normal spending ($\le 85\%$ of limit).
   - 🟠 **Orange**: Approaching threshold ($> 85\%$ of limit).
@@ -93,6 +95,7 @@ SvHomeBudget follows modern declarative SwiftUI patterns with direct SwiftData c
                       │  (@Query categories) │
                       │  (@Query pools)      │
                       │  (@Query expenses)   │
+                      │  (@State selectedDate│
                       └───────┬──┬──┬──┬─────┘
                               │  │  │  │
         ┌─────────────────────┘  │  │  └──────────────────────┐
@@ -101,8 +104,9 @@ SvHomeBudget follows modern declarative SwiftUI patterns with direct SwiftData c
 │Quick Add Modal│  │MonthlyExpenses   │  │ManageCategories │  │  DataBackupView  │
 │  - Category   │  │  - By month key  │  │  - Add / Edit   │  │  - Export JSON   │
 │  - Expense    │  │  - Swipe delete  │  │  - Cascade del │  │  - Import (Merge/ │
-│  (Pool deduct)│  └──────────────────┘  └─────────────────┘  │    Replace mode) │
-└───────────────┘                                             └──────────────────┘
+│  (DatePicker &│  └──────────────────┘  └─────────────────┘  │    Replace mode) │
+│   Pool deduct)│                                             └──────────────────┘
+└───────────────┘
 ```
 
 1. **Root Injection**: `SvHomeBudgetApp` initializes the SwiftData container with `[ExpenseCategory.self, Expense.self, MonthlyPool.self]` using `.modelContainer(...)`.
@@ -169,12 +173,15 @@ final class MonthlyPool {
 ## View Hierarchy & UI Structure
 
 ### Main Dashboard (`ContentView.swift`)
-- **Header**: Shows current cycle label (`MMMM yyyy`) and a button displaying the remaining monthly pool formatted in EUR. Tapping opens an alert sheet to modify or reset the monthly budget.
+- **Header**:
+  - Chevron buttons (`◀` and `▶`) to step backward and forward through monthly cycles.
+  - Cycle status indicator ("Current Cycle" vs. "Historical Cycle" with a one-tap "• Today" reset button).
+  - "Added Pool" trigger button showing remaining deposit pool formatted in EUR for the active month. Tapping opens an alert to configure that month's budget.
 - **Action Hub**:
-  - Direct navigation button to `MonthlyExpensesView`.
+  - Navigation button to `MonthlyExpensesView` dynamically labeled for the active month (e.g. "View October 2026 Expenses").
   - "Log a New Expenditure" button (disabled when no categories exist).
 - **Categories Dashboard**:
-  - Displays each category with name, emoji, progress bar, and spending ratio `€spent / €limit`.
+  - Displays each category with name, emoji, progress bar, and spending ratio `€spent / €limit` dynamically evaluated for the selected cycle month.
   - Includes a "Quick Add" toolbar button and deep link to `ManageCategoriesView`.
 - **Navigation Links**:
   - Link to `ManageCategoriesView` for category editing and deletion.
@@ -198,7 +205,7 @@ final class MonthlyPool {
 
 ### Quick Entry Views (`QuickAddCategoryView.swift`)
 - **QuickAddCategoryView**: Compact sheet for rapid category onboarding.
-- **QuickAddExpenseView**: Streamlined modal to log expenses with amount, note, and category picker. Automatically deducts the charged amount from the active monthly pool.
+- **QuickAddExpenseView**: Streamlined modal to log expenses with amount, note, interactive `DatePicker` (defaulting to the currently viewed dashboard cycle), and category picker. Automatically deducts the charged amount from the active monthly pool.
 
 ### Backup & Restore (`DataBackupView.swift`)
 - **Database Overview**: Displays current count of stored categories, expenses, and pools.

@@ -26,11 +26,11 @@ This document serves as the persistent memory and technical context for the SvHo
 | :--- | :--- | :--- |
 | `SvHomeBudget/MyApp.swift` | App Entry Point | `struct SvHomeBudgetApp: App`<br>Configures SwiftData container. |
 | `SvHomeBudget/Models.swift` | Persistence Schema | `ExpenseCategory`, `Expense`, `MonthlyPool`<br>`ExpenseCategory.totalSpent(for:)`, `MonthlyPool.deduct(amount:)`. |
-| `SvHomeBudget/ContentView.swift` | Main Hub / Dashboard | `struct ContentView: View`<br>Monthly cycle header, pool trigger alert, progress bars, quick entry buttons, backup & restore link. |
+| `SvHomeBudget/ContentView.swift` | Main Hub / Dashboard | `struct ContentView: View`<br>Monthly cycle header stepper, pool trigger alert, progress bars, quick entry buttons, backup & restore link. |
 | `SvHomeBudget/MonthlyExpensesView.swift` | Expense History | `struct MonthlyExpensesView: View`<br>Aggregated month total, filtered line items, swipe-to-delete. |
 | `SvHomeBudget/ManageCategoriesView.swift` | Category Management | `struct ManageCategoriesView: View`<br>List categories, edit button, swipe-to-delete with cascade, add button. |
 | `SvHomeBudget/CategoryFormSheet.swift` | Category Form Sheet | `struct CategoryFormSheet: View`<br>Reusable form for Add/Edit with emoji 1-character cap and validation. |
-| `SvHomeBudget/QuickAddCategoryView.swift` | Fast Entry Sheets | `struct QuickAddCategoryView: View`<br>`struct QuickAddExpenseView: View`<br>Quick-entry sheets triggered from ContentView. Automatically reduces monthly pool on expense logging. |
+| `SvHomeBudget/QuickAddCategoryView.swift` | Fast Entry Sheets | `struct QuickAddCategoryView: View`<br>`struct QuickAddExpenseView: View`<br>Quick-entry sheets triggered from ContentView. Accepts `initialDate`, contains `DatePicker`, and reduces monthly pool on expense logging. |
 | `SvHomeBudget/DataBackupManager.swift` | Backup & Restore Engine | `BackupData`, `CategoryBackupDTO`, `ExpenseBackupDTO`, `MonthlyPoolBackupDTO`, `DataBackupManager`, `BackupDocument`<br>Encodes/decodes JSON backups and applies merge or replace operations to SwiftData. |
 | `SvHomeBudget/DataBackupView.swift` | Backup & Restore UI | `struct DataBackupView: View`<br>Dashboard counts, JSON file exporter, ShareLink, file importer, merge/replace confirmation alerts. |
 | `SvHomeBudgetTests/SvHomeBudgetTests.swift` | Unit Test Suite | `class SvHomeBudgetTests: XCTestCase`<br>In-memory `ModelContainer` tests for calculations, deductions, JSON encoding, replace/merge imports, and error handling. |
@@ -107,6 +107,11 @@ erDiagram
 8. **App Icon & Asset Catalog Configuration**:
    - The app icon is stored in `Assets.xcassets/AppIcon.appiconset`.
    - The target build setting `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;` is configured in `project.pbxproj` under `SvHomeBudget` target build settings so Xcode's `actool` compiles the app icon into `Assets.car` and populates `CFBundleIcons` in the generated `Info.plist`.
+9. **Month Navigation & Cycle Stepping**:
+   - `ContentView` manages `@State private var selectedDate: Date = Date()`.
+   - Steppers (`changeMonth(by:)`) navigate between past and future calendar cycles.
+   - All category progress bars, monthly pools, and history navigation dynamically adapt to the currently selected month.
+   - `QuickAddExpenseView` receives `initialDate: selectedDate` and features an interactive `DatePicker` to accurately log transactions to any selected cycle.
 
 ---
 

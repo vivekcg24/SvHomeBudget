@@ -15,17 +15,23 @@ struct ContentView: View {
     @State private var showEditPoolAlert = false
     @State private var poolInputString = ""
     
-    // Date tracking properties
-    private var currentDate: Date { Date() }
+    // Date tracking properties - now stateful to support month navigation (Approach A)
+    @State private var selectedDate: Date = Date()
+    
+    private var isCurrentMonth: Bool {
+        Calendar.current.isDate(selectedDate, equalTo: Date(), toGranularity: .month)
+    }
+    
     private var currentMonthString: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM yyyy"
-        return formatter.string(from: currentDate)
+        return formatter.string(from: selectedDate)
     }
+    
     private var currentYearMonthKey: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM"
-        return formatter.string(from: currentDate)
+        return formatter.string(from: selectedDate)
     }
     
     // Find or fallback total budget injected for this month
@@ -36,17 +42,48 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // --- 1. Dynamic Header Area ---
+                // --- 1. Dynamic Header Area with Month Stepper (Approach A) ---
                 VStack(spacing: 8) {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(currentMonthString)
-                                .font(.title2.bold())
-                                .foregroundColor(.primary)
-                            Text("Current Cycle")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                    HStack(alignment: .center) {
+                        // Previous Month Button
+                        Button(action: { changeMonth(by: -1) }) {
+                            Image(systemName: "chevron.left.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.blue)
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Previous month")
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(currentMonthString)
+                                .font(.title3.bold())
+                                .foregroundColor(.primary)
+                            
+                            HStack(spacing: 4) {
+                                Text(isCurrentMonth ? "Current Cycle" : "Historical Cycle")
+                                    .font(.caption2)
+                                    .foregroundColor(isCurrentMonth ? .secondary : .orange)
+                                
+                                if !isCurrentMonth {
+                                    Button(action: resetToCurrentMonth) {
+                                        Text("• Today")
+                                            .font(.caption2.bold())
+                                            .foregroundColor(.blue)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        
+                        // Next Month Button
+                        Button(action: { changeMonth(by: 1) }) {
+                            Image(systemName: "chevron.right.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.blue)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Next month")
+                        
                         Spacer()
                         
                         // Added Pool Display Trigger Button
@@ -63,7 +100,7 @@ struct ContentView: View {
                                     .font(.headline.bold())
                                     .foregroundColor(.blue)
                             }
-                            .padding(.horizontal, 12)
+                            .padding(.horizontal, 10)
                             .padding(.vertical, 6)
                             .background(Color(.systemBackground))
                             .cornerRadius(8)
@@ -79,7 +116,7 @@ struct ContentView: View {
                     NavigationLink(destination: MonthlyExpensesView(monthKey: currentYearMonthKey, monthLabel: currentMonthString)) {
                         HStack {
                             Image(systemName: "doc.text.magnifyingglass")
-                            Text("View This Month's Expenses")
+                            Text("View \(currentMonthString) Expenses")
                             Spacer()
                             Image(systemName: "chevron.right")
                         }
@@ -128,7 +165,7 @@ struct ContentView: View {
                             ContentUnavailableView("No Categories Active", systemImage: "folder.badge.plus", description: Text("Tap Quick Add above to bootstrap your spending layout limits."))
                         } else {
                             ForEach(categories) { category in
-                                let spent = category.totalSpent(for: currentDate)
+                                let spent = category.totalSpent(for: selectedDate)
                                 let limit = category.monthlyLimit
                                 let ratio = limit > 0 ? min(spent / limit, 1.0) : 0.0
                                 
@@ -197,18 +234,30 @@ struct ContentView: View {
             
             // Sheet triggers for adding content
             .sheet(isPresented: $showQuickAddCategory) { QuickAddCategoryView() }
-            .sheet(isPresented: $showAddExpenseSheet) { QuickAddExpenseView(categories: categories) }
+            .sheet(isPresented: $showAddExpenseSheet) { QuickAddExpenseView(categories: categories, initialDate: selectedDate) }
             
             // Native Dialog pop-up text entry engine wrapper to configure limits
-            .alert("Set Monthly Deposit Pool", isPresented: $showEditPoolAlert) {
+            .alert("Set Deposit Pool for \(currentMonthString)", isPresented: $showEditPoolAlert) {
                 TextField("Amount (€)", text: $poolInputString)
                     .keyboardType(.decimalPad)
                 Button("Save", action: updateMonthlyPoolAmount)
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Specify total available currency volume injected into the current month system tracker calculations layout context.")
+                Text("Specify total available currency volume injected into the \(currentMonthString) tracker calculations.")
             }
         }
+    }
+    
+    // MARK: - Month Navigation
+    
+    private func changeMonth(by offset: Int) {
+        if let newDate = Calendar.current.date(byAdding: .month, value: offset, to: selectedDate) {
+            selectedDate = newDate
+        }
+    }
+    
+    private func resetToCurrentMonth() {
+        selectedDate = Date()
     }
     
     private func updateMonthlyPoolAmount() {

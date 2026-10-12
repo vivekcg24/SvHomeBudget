@@ -44,9 +44,11 @@ struct QuickAddExpenseView: View {
     @Query private var pools: [MonthlyPool]
     
     var categories: [ExpenseCategory]
+    var initialDate: Date = Date()
     
     @State private var amountString = ""
     @State private var note = ""
+    @State private var expenseDate = Date()
     @State private var selectedCategory: ExpenseCategory?
     
     var body: some View {
@@ -56,6 +58,8 @@ struct QuickAddExpenseView: View {
                     .keyboardType(.decimalPad)
                 TextField("Memo Note/Store Label Description", text: $note)
                 
+                DatePicker("Transaction Date", selection: $expenseDate, displayedComponents: [.date])
+                
                 Picker("Target Category Tracker Allocation", selection: $selectedCategory) {
                     Text("Select Target").tag(nil as ExpenseCategory?)
                     ForEach(categories) { cat in
@@ -63,13 +67,17 @@ struct QuickAddExpenseView: View {
                     }
                 }
             }
-            .onAppear { if selectedCategory == nil { selectedCategory = categories.first } }
+            .onAppear {
+                expenseDate = initialDate
+                if selectedCategory == nil {
+                    selectedCategory = categories.first
+                }
+            }
             .navigationTitle("Log Expenditure")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") {
                         guard let amt = Double(amountString), let cat = selectedCategory else { return }
-                        let expenseDate = Date()
                         let newExpense = Expense(amount: amt, date: expenseDate, note: note, category: cat)
                         modelContext.insert(newExpense)
                         cat.expenses.append(newExpense)
