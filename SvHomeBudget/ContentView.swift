@@ -79,10 +79,12 @@ struct ContentView: View {
                         Button(action: { changeMonth(by: 1) }) {
                             Image(systemName: "chevron.right.circle.fill")
                                 .font(.title2)
-                                .foregroundColor(.blue)
+                                .foregroundColor(isCurrentMonth ? .gray.opacity(0.5) : .blue)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Next month")
+                        // 🔴 Disables interaction completely when on the current month
+                        .disabled(isCurrentMonth)
                         
                         Spacer()
                         
